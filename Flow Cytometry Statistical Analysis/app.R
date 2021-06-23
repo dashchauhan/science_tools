@@ -29,7 +29,7 @@ ui <- fluidPage(
             ),
             
             # Input: Upload Metadata ----
-            checkboxInput('meta',strong('3. Metadata available?'), value = T),
+            checkboxInput('meta',strong('3. Metadata available?'), value = F),
             conditionalPanel(
                 condition = "input.meta == 1",
                 h5(strong('Option A:'), " Upload .csv of metadata (must include 'Sample' column)"),
@@ -122,6 +122,8 @@ ui <- fluidPage(
                                  fluidRow(column(9,dataTableOutput("df_metaout")))
                         ),
                         tabPanel("Documentation",
+                                 h5('To be updated.'),
+                                 h5('Please see https://github.com/armetcal/science_tools for sample datasets.')
                         )
             )
         )
@@ -312,7 +314,8 @@ server <- function(input, output) {
     output$pos_gate <- renderUI({
         res_imp <- df_chosen()
         df_s <- unique(res_imp$Gate)
-        selectInput("pos_gate",h5(strong('5a.'),' Choose Gate(s) of Interest'), df_s, multiple = T, selected = 'syto+pe+')
+        selectInput("pos_gate",h5(strong('5a.'),' Choose Gate(s) of Interest'), df_s, multiple = T)
+        
     })
     output$neg_gate <- renderUI({
         res_imp <- df_chosen()
@@ -320,11 +323,15 @@ server <- function(input, output) {
         selectInput("neg_gate",h5(strong('5b.'),' Choose Background Gate(s)',br(),br(),
                                   em('Parent: all events in Parent gate.'),br(),br(),
                                   em('Other background gates: results will be calculated as % Gate/(Gate+Background)')),
-                    df_s, multiple = T, selected = 'syto+pe-')
+                    df_s, multiple = T)
     })
     
     # Selects relevant +/- gate(s), finds % Target
     df_gate <- reactive({
+        validate(
+            need(input$pos_gate, "Please select a positive gate(s)."),
+            need(input$neg_gate, "Please select a negative gate(s).")
+        )
         gates = c(input$pos_gate, input$neg_gate)
         gates = gates[gates != 'Parent']
         # Filter dataframe to only include gates of interest.
@@ -343,9 +350,13 @@ server <- function(input, output) {
             df2 = df %>% select(any_of('Batch'),Sample,GROUPVAR,any_of('Iso'))
         } else if(isTruthy(input$metafile)){
             df2 = df %>% select(any_of('Batch'),Sample,GROUPVAR,any_of(names(df_metafile())),any_of('Iso'))
-        } else if(input$meta == 0){
+        } else {
+            validate(
+                need(input$meta == 0, "Please upload the metadata file.")
+            )
             df2 = df %>% select(any_of('Batch'),Sample,any_of('Iso'))
-        }
+        } 
+        
         # Define target pop
         df2$Pos = df %>% select(all_of(input$pos_gate)) %>% rowSums()
         if(input$neg_gate == 'Parent'){ # % Target is simply % parent
@@ -489,16 +500,16 @@ server <- function(input, output) {
                 m = input$stat_pair2
                 if(isTruthy(input$plot_cluster) & input$plot_cluster != 'None'){
                     p = p + stat_compare_means(aes(group = Group), method = m,
-                                               inherit.aes = T, size = 6, label.y = stat_pos)
+                                               inherit.aes = T, size = 6, label.y = stat_pos) + labs(fill = input$plot_cluster)
                 } else {
                     p = p + stat_compare_means(method = m,
-                                               inherit.aes = T, size = 6, label.y = stat_pos)
+                                               inherit.aes = T, size = 6, label.y = stat_pos) + labs(fill = input$groupname)
                 }
             } else {
                 m = input$stat_pair3
                 r = input$plot_control
                 p = p + stat_compare_means(label = "p.format", method = m, ref.group = r,
-                                           inherit.aes = T, size = 6, label.y = stat_pos)
+                                           inherit.aes = T, size = 6, label.y = stat_pos) + labs(fill = input$groupname)
             }
             #Faceting
             if(isTruthy(input$plot_facet) & input$plot_facet != 'None'){
@@ -517,7 +528,7 @@ server <- function(input, output) {
             }
         }
         p=p + theme_classic(base_size = 20) + 
-            ylab('% Target Events') + xlab(input$groupname) + labs(fill = input$groupname)
+            ylab('% Target Events') + xlab(input$groupname)
         
         return(p)
     })
@@ -540,9 +551,12 @@ server <- function(input, output) {
         req(input$file1)
         df = df_pcttable() %>% unique() %>% filter(`% Target` != '')
         validate(
-            need(input$meta == T, "No metadata available for statistics"),
+            need(input$meta == T, "No metadata available for statistics")
+        )
+        validate(
             need(input$plot_control != 'None', "No statistical test selected")
         )
+        
         #Extract data
         g = ggplot_build(plot())$data[[3]] %>% as.data.frame()
         validate(
