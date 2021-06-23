@@ -1,4 +1,6 @@
-# This Shiny application is designed to process Attune flow cytometry data (though other machine outputs are likely to work as well).
+## Flow Cytometry Statistical Analysis
+
+### This Shiny application is designed to process Attune flow cytometry data (though other machine outputs are likely to work as well).
 
 Documentation is yet to be uploaded.
 
