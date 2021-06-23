@@ -1,0 +1,48 @@
+Sample,Status,Sex,Batch
+NS,NA,NA,File 1
+PE,NA,NA,File 1
+SYTOX,NA,NA,File 1
+IgG Iso,NA,NA,File 1
+Sample 1,High,M,File 1
+Sample 2,Low,F,File 1
+Sample 3,High,M,File 1
+Sample 4,Low,F,File 1
+Sample 6,High,M,File 1
+Sample 5,Low,F,File 1
+Sample 7,High,M,File 1
+Sample 8,High,F,File 1
+Sample 9,Low,M,File 1
+Sample 10,High,F,File 1
+Sample 11,Low,M,File 1
+Sample 12,Low,F,File 1
+Sample 13,Low,M,File 1
+Sample 14,High,F,File 1
+Buffer,NA,NA,File 2
+NS,NA,NA,File 2
+PE,NA,NA,File 2
+SYTOX,NA,NA,File 2
+Sample 1,High,M,File 2
+Sample 2,Low,F,File 2
+Sample 3,High,M,File 2
+Sample 4,High,F,File 2
+Sample 5,Low,M,File 2
+Sample 6,High,F,File 2
+Sample 7,High,M,File 2
+Sample 8,Low,F,File 2
+Sample 9,High,M,File 2
+Sample 10,Low,F,File 2
+Sample 11,High,M,File 2
+Sample 12,High,F,File 2
+Sample 13,Low,M,File 2
+Sample 14,High,F,File 2
+Buffer,NA,NA,File 2
+Sample 15,High,M,File 2
+Sample 16,High,F,File 2
+Sample 17,Low,M,File 2
+Sample 18,High,F,File 2
+Sample 19,Low,M,File 2
+Sample 20,High,F,File 2
+Sample 21,Low,M,File 2
+Sample 22,Low,F,File 2
+Sample 23,Low,M,File 2
+Sample 24,High,F,File 2

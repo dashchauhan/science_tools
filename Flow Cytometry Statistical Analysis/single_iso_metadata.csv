@@ -1,0 +1,35 @@
+Sample,Status,Sex,Test
+1,High,Male,1
+2,Low,Male,2
+3,High,Female,3
+4,Low,Male,1
+5,High,Female,2
+6,Low,Female,3
+7,High,Male,1
+8,Low,Female,2
+9,High,Female,3
+10,Low,Female,1
+11,High,Male,2
+12,Low,Male,3
+13,High,Female,1
+14,High,Male,2
+15,Low,Female,3
+1 iso,High,Male,1
+2 iso,Low,Male,2
+3 iso,High,Female,3
+4 iso,Low,Male,1
+5 iso,High,Female,2
+6 iso,Low,Female,3
+7 iso,High,Male,1
+8 iso,Low,Female,2
+9 iso,High,Female,3
+10 iso,Low,Female,1
+11 iso,High,Male,2
+12 iso,Low,Male,3
+13 iso,High,Female,1
+14 iso,High,Male,2
+15 iso,Low,Female,3
+Buffer,NA,NA,NA
+Unstained,NA,NA,NA
+PE,NA,NA,NA
+SYTO,NA,NA,NA

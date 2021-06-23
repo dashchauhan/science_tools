@@ -44,7 +44,7 @@ ui <- fluidPage(
             ),
             
             # Input: Identify Isotypes ----
-            checkboxInput("isoused", strong("4. Isotype used?"), value = T),
+            checkboxInput("isoused", strong("4. Isotype used?"), value = F),
             conditionalPanel(
                 condition = 'input.isoused == 1',
                 checkboxInput("suffix", "Isotypes identified by suffix?", value = T),
@@ -616,7 +616,11 @@ server <- function(input, output) {
             return(t1)
         } else { # Metadata
             if(isTruthy(input$plot_facet) & input$plot_facet != 'None'){
-                names(df)[names(df)==input$plot_facet] = 'FAC'
+                if(input$plot_facet=='Batch (multiple input files only)'){
+                    names(df)[names(df)=='Batch'] = 'FAC'
+                } else {
+                    names(df)[names(df)==input$plot_facet] = 'FAC'
+                }
                 if(isTruthy(input$plot_cluster) & input$plot_cluster != 'None' & input$plot_control == 'Multiple'){
                     names(df)[names(df)==input$plot_cluster] = 'CLUS'
                     t1 = df %>% group_by(GROUPVAR,FAC,CLUS)
@@ -659,49 +663,6 @@ server <- function(input, output) {
             write.csv(sum3(), filename, row.names = F)
         }
     )
-    
-    # sum4 = reactive({
-    #     # if(!isTruthy(sum1())){ # not enough observations to calculate p values, or no metadata
-    #     #     df = sum3()
-    #     #     if('GROUPVAR' %in% names(df)){
-    #     #         df = df %>% rename(input$groupname = GROUPVAR)
-    #     #     }
-    #     #     return(df)
-    #     # } else {
-    #     df1 = sum2()
-    #     df2 = sum3()
-    #     is_pairwise = (df1$`Stat Test`[1] %in% c('Wilcoxon','T-test'))
-    #         
-    #         if(isTruthy(input$plot_facet) & input$plot_facet != 'None' & isTruthy(input$plot_cluster) & input$plot_cluster != 'None'){ # pairwise = F
-    #             df2 = df2 %>% rename('Variable' = GROUPVAR, 'Facet' = FAC, 'Cluster' = CLUS)
-    #         } else if(isTruthy(input$plot_facet) & input$plot_facet != 'None' & !(isTruthy(input$plot_cluster) & input$plot_cluster != 'None')){
-    #             if(is_pairwise){
-    #                 df2 = df2 %>% rename('Variable' = GROUPVAR, 'Facet' = FAC)
-    #             } else {
-    #                 df1 = df1 %>% select(-Variable)
-    #                 df2 = df2 %>% rename('Variable' = GROUPVAR, 'Facet' = FAC)
-    #             }
-    #         } else if (!(isTruthy(input$plot_facet) & input$plot_facet != 'None') & isTruthy(input$plot_cluster) & input$plot_cluster != 'None'){
-    #             df2 = df2 %>% rename('Variable' = GROUPVAR, 'Cluster' = CLUS)
-    #         } else {
-    #             if(is_pairwise){
-    #                 df2 = df2 %>% rename('Variable' = GROUPVAR)
-    #             } else {
-    #                 df1 = df1 %>% select(-Variable)
-    #                 df2 = df2 %>% rename('Variable' = GROUPVAR)
-    #             }
-    #         }
-    #     if(!is_pairwise){ # No ID columns left
-    #         df3 = cbind(df2, df1)
-    #     } else {
-    #         df3 = left_join(df2, df1) 
-    #     }
-    #     return(df3)
-    # })
-    # 
-    # output$sum4 <- renderDataTable({
-    #     return(sum4())
-    # })
-    
+
 }
 shinyApp(ui = ui, server = server)
