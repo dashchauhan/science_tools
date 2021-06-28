@@ -29,7 +29,7 @@ ui <- fluidPage(
             ),
             
             # Input: Upload Metadata ----
-            checkboxInput('meta',strong('3. Metadata available?'), value = F),
+            checkboxInput('meta',strong('3. Metadata Available?'), value = F),
             conditionalPanel(
                 condition = "input.meta == 1",
                 h5(strong('Option A:'), " Upload .csv of metadata (must include 'Sample' column)"),
@@ -122,8 +122,9 @@ ui <- fluidPage(
                                  fluidRow(column(9,dataTableOutput("df_metaout")))
                         ),
                         tabPanel("Documentation",
-                                 h5('To be updated.'),
-                                 h5('Please see https://github.com/armetcal/science_tools for sample datasets.')
+                                 # h5('To be updated.'),
+                                 # h5('Please see https://github.com/armetcal/science_tools for sample datasets.'),
+                                 includeMarkdown('Documentation.md')
                         )
             )
         )
@@ -370,7 +371,7 @@ server <- function(input, output) {
         return(df2)
     })
     
-    # 9. Subtracts iso samples, renders output table ----
+    # 9. Subtracts iso samples, arranges output table ----
     df_pcttable <- reactive({
         req(input$file1)
         df = df_gate() %>% mutate(Pos = round(Pos, digits = 1), Neg = round(Neg, digits = 1),
@@ -378,6 +379,9 @@ server <- function(input, output) {
         df$Iso[df$Iso == T] = 'Isotype'
         df$Iso[df$Iso == F] = 'Regular'
         if(input$isoused == T){
+            validate(
+                need(length(df$Iso %>% unique())>1, "Error: Isotypes do not exist or are improperly formatted.")
+            )
             df = df %>% 
                 pivot_wider(names_from = Iso, 
                             values_from = c(Pos, Neg, `% Target`), 
@@ -398,8 +402,8 @@ server <- function(input, output) {
     # 10. UIs for plot options ----
     # Select control group
     output$control <- renderUI({
-        req(input$metafile)
-        df_s <- df_metafile() %>% select(input$groupname) %>% mutate_all(as.character) %>% unique()
+        req(input$meta==1)
+        df_s <- df_pcttable() %>% select(GROUPVAR) %>% mutate_all(as.character) %>% unique()
         df_s = df_s[is.na(df_s)==F]
         selectInput("plot_control",
                     h5('Specify control group for pairwise comparison (select Multiple for multiple comparisons)'), 
@@ -410,14 +414,11 @@ server <- function(input, output) {
         req(input$file1)
         inputs <- c('None','Batch (multiple input files only)')
         if(input$meta == 1){
-            if(input$metaid != ''){
-                inputs = c(inputs,'GROUPVAR')
-            } else {
-                df <- df_metafile()  %>% select(-Sample)
-                inputs = c(inputs,names(df))
-            }
+            req(input$metafile)
+            df <- df_metafile() %>% select(-Sample)
+            inputs = c(inputs,names(df))
         }
-        selectInput("plot_facet",h5('Facet plot by metadata column(s)'), inputs, multiple = F)
+        selectInput("plot_facet",h5('Facet plot by metadata column'), inputs, multiple = F)
     })
     # Select cluster group
     output$group <- renderUI({
@@ -426,7 +427,7 @@ server <- function(input, output) {
         if(isTruthy(df_metafile()) & input$plot_control %in% c('None','Multiple')){
             df <- df_metafile()  %>% select(-Sample)
             inputs = c(inputs,names(df))
-            selectInput("plot_cluster",h5('Cluster by metadata column(s)'), inputs, multiple = F)
+            selectInput("plot_cluster",h5('Cluster by metadata column'), inputs, multiple = F)
         }
     })
     
@@ -434,7 +435,11 @@ server <- function(input, output) {
     output$pcttable <- renderDataTable({
         req(input$file1)
         df = df_pcttable() %>% unique() %>% select(-any_of('Iso'))
-        names(df)[names(df)=='GROUPVAR'] = input$groupname
+        if(input$metaid == ''){
+            names(df)[names(df)=='GROUPVAR'] = input$groupname
+        } else {
+            names(df)[names(df)=='GROUPVAR'] = 'Metadata'
+        }
         return(df)
     })
     
@@ -456,7 +461,8 @@ server <- function(input, output) {
     
     # 13a. CREATE PLOT ----
     plot <- reactive({
-        req(input$file1)
+        # req(input$file1)
+        req(df_pcttable())
         df_plot = df_pcttable() %>% unique()
         max_point = max(df_plot$`% Target`, na.rm = T)
         stat_pos = 1.075*max_point
@@ -467,7 +473,39 @@ server <- function(input, output) {
                 geom_boxplot(fill = 'purple1',outlier.shape = NA) +
                 geom_jitter(height = 0, width = 0.1) +
                 theme_classic(base_size = 20) + ylab('% Target Events') + xlab('')
+            # Batch facet
+            if(isTruthy(input$plot_facet) & input$plot_facet == 'Batch (multiple input files only)'){
+                p = p + facet_wrap("Batch")
+            }
         # Metadata
+        } else if(input$metaid != ''){
+            # Filter out NAs
+            if(input$filter_na == T){
+                df_plot = df_plot %>% filter(is.na(GROUPVAR)==F & GROUPVAR != '')
+            }
+            # Plot
+            p = ggplot(df_plot, aes(GROUPVAR,`% Target`, fill = GROUPVAR)) +
+                geom_boxplot(outlier.shape = NA) +
+                geom_jitter(height = 0, width = 0.1) +
+                theme_classic(base_size = 20) + ylab('% Target Events') + xlab('Metadata')
+            # Add stats
+            if(input$plot_control == 'None'){
+            } else if(input$plot_control == 'Multiple'){
+                m = input$stat_pair2
+                p = p + stat_compare_means(method = m, inherit.aes = T, size = 6, label.y = stat_pos)
+            } else {
+                m = input$stat_pair3
+                r = input$plot_control
+                p = p + stat_compare_means(label = "p.format", method = m, ref.group = r,
+                                           inherit.aes = T, size = 6, label.y = stat_pos)
+            }
+            #Faceting
+            if(isTruthy(input$plot_facet) & input$plot_facet == 'Batch (multiple input files only)'){
+                p = p+facet_wrap('Batch')
+            }
+            
+            p=p+labs(fill = 'Metadata')
+            
         } else {
             # Filter out NAs
             if(input$filter_na == T){
@@ -483,13 +521,13 @@ server <- function(input, output) {
                     Group = input$plot_cluster
                     names(df_plot)[names(df_plot)==Group] = 'Group'
                     df_plot$Group = factor(df_plot$Group)
-                    p = ggplot(df_plot, aes(GROUPVAR, `% Target`, fill = Group))
+                    p = ggplot(df_plot, aes(GROUPVAR, `% Target`, fill = Group))  + xlab(input$groupname)
                 } else {
-                    p = ggplot(df_plot, aes(GROUPVAR, `% Target`, fill = GROUPVAR))
+                    p = ggplot(df_plot, aes(GROUPVAR, `% Target`, fill = GROUPVAR))  + xlab(input$groupname)
                 }
             # Pairwise (can't cluster, must facet instead)
             } else {
-                p = ggplot(df_plot, aes(GROUPVAR, `% Target`, fill = GROUPVAR))
+                p = ggplot(df_plot, aes(GROUPVAR, `% Target`, fill = GROUPVAR))  + xlab(input$groupname)
             }
             # Basic parameters
             p = p + geom_boxplot(outlier.shape = NA) +
@@ -517,6 +555,8 @@ server <- function(input, output) {
                     need(input$plot_facet != input$groupname, 
                          "Faceting variable is already selected as variable of interest - please choose another.")
                 )
+                p = p + xlab(input$groupname)
+                
                 f = input$plot_facet
                 if(f == 'Batch (multiple input files only)'){
                     f = 'Batch'
@@ -528,7 +568,7 @@ server <- function(input, output) {
             }
         }
         p=p + theme_classic(base_size = 20) + 
-            ylab('% Target Events') + xlab(input$groupname)
+            ylab('% Target Events') 
         
         return(p)
     })
@@ -570,7 +610,6 @@ server <- function(input, output) {
         return(t1)
         
     })
-    
 
     # 14b. Stats Table ----
     sum2 <- reactive({
@@ -579,18 +618,29 @@ server <- function(input, output) {
                            'Group' = x) %>% 
             select(Facet,Group,`P value`, `Stat Test`)
         
-        df_a = df_metafile()
-        
-        w = which(names(df_a)==input$groupname)
-        df_g = df_a[,w] %>% as.character() %>% as.factor()
-        df2 = df %>% mutate(Group = levels(df_g)[as.numeric(as.character(Group))]) %>% 
-            mutate(`X var` = input$groupname) %>% 
-            select(`X var`,Group, everything())
+        if(input$meta == 1 & input$metaid ==''){
+            df_a = df_metafile()
+            w = which(names(df_a)==input$groupname)
+            df_g = df_a[,w] %>% as.character() %>% as.factor()
+            df2 = df %>% mutate(Group = levels(df_g)[as.numeric(as.character(Group))]) %>% 
+                mutate(`X var` = input$groupname) %>% 
+                select(`X var`,Group, everything())
+        } else if(input$meta == 1 & input$metaid !=''){
+            df_a = df_pcttable()
+            df_g = df_a$GROUPVAR %>% as.character() %>% as.factor()
+            df2 = df %>% mutate(Group = levels(df_g)[as.numeric(as.character(Group))]) %>% 
+                mutate(`X var` = 'Metadata') %>% 
+                select(`X var`,Group, everything())
+        }
         
         # Faceting
         if(isTruthy(input$plot_facet) & input$plot_facet != 'None'){
-            w = which(names(df_a)==input$plot_facet)
-            df_f = df_a[,w] %>% as.character() %>% as.factor()
+            if(input$plot_facet == 'Batch'){
+                df_f = df_a$Batch %>% as.character() %>% as.factor()
+            } else {
+                w = which(names(df_a)==input$plot_facet)
+                df_f = df_a[,w] %>% as.character() %>% as.factor()
+            }
             df3 <- df2 %>% mutate(Facet = levels(df_f)[as.numeric(as.character(Facet))]) %>% 
                 select(Facet, everything())
         } else {
@@ -600,6 +650,7 @@ server <- function(input, output) {
         # Add Ctrl column
         if(df3$`Stat Test`[1] %in% c('Wilcoxon','T-test')){
             df3$`Ctrl Group` = input$plot_control
+        } else if(isTruthy(input$plot_cluster) & input$plot_cluster != 'None'){
         } else {
             df3 = df3 %>% select(-Group)
         }
@@ -623,47 +674,68 @@ server <- function(input, output) {
         df = df_pcttable() %>% unique() %>% filter(`% Target` != '')
         
         if(input$meta == 0){
-            t1 = tibble(N = nrow(df), 
-                        `Mean Target` = round(mean(df$`% Target`, na.rm = T),digits = 2),
-                        `Median Target` = round(median(df$`% Target`, na.rm = T),digits = 2),
-                        `Std Dev` = round(sd(df$`% Target`, na.rm = T),digits = 2))
+            if(isTruthy(input$plot_facet) & input$plot_facet == 'Batch (multiple input files only)'){
+                names(df)[names(df)=='Batch'] = 'Facet'
+                t1 = df %>% group_by(Facet)
+                t1 = t1 %>% summarize(N = n(),
+                                      `Mean Target` = round(mean(`% Target`, na.rm = T),digits=2),
+                                      `Median Target` = round(median(`% Target`, na.rm = T),digits=2),
+                                      `Std Dev` = round(sd(`% Target`, na.rm = T),digits=2),
+                                      .groups = 'keep') %>% arrange(Facet)
+            } else {
+                t1 = df %>% summarize(N = n(),
+                                      `Mean Target` = round(mean(`% Target`, na.rm = T),digits=2),
+                                      `Median Target` = round(median(`% Target`, na.rm = T),digits=2),
+                                      `Std Dev` = round(sd(`% Target`, na.rm = T),digits=2),
+                                      .groups = 'keep')
+            }
             return(t1)
         } else { # Metadata
-            if(isTruthy(input$plot_facet) & input$plot_facet != 'None'){
-                if(input$plot_facet=='Batch (multiple input files only)'){
-                    names(df)[names(df)=='Batch'] = 'FAC'
+            if(input$metaid ==''){
+                if(isTruthy(input$plot_facet) & input$plot_facet != 'None'){
+                    if(input$plot_facet=='Batch (multiple input files only)'){
+                        names(df)[names(df)=='Batch'] = 'FAC'
+                    } else {
+                        names(df)[names(df)==input$plot_facet] = 'FAC'
+                    }
+                    if(isTruthy(input$plot_cluster) & input$plot_cluster != 'None' & input$plot_control == 'Multiple'){
+                        names(df)[names(df)==input$plot_cluster] = 'CLUS'
+                        t1 = df %>% group_by(GROUPVAR,FAC,CLUS)
+                    } else {
+                        t1 = df %>% group_by(GROUPVAR,FAC)
+                    }
                 } else {
-                    names(df)[names(df)==input$plot_facet] = 'FAC'
-                }
-                if(isTruthy(input$plot_cluster) & input$plot_cluster != 'None' & input$plot_control == 'Multiple'){
-                    names(df)[names(df)==input$plot_cluster] = 'CLUS'
-                    t1 = df %>% group_by(GROUPVAR,FAC,CLUS)
-                } else {
-                    t1 = df %>% group_by(GROUPVAR,FAC)
+                    if(isTruthy(input$plot_cluster) & input$plot_cluster != 'None' & input$plot_control == 'Multiple'){
+                        names(df)[names(df)==input$plot_cluster] = 'CLUS'
+                        t1 = df %>% group_by(GROUPVAR,CLUS)
+                    } else {
+                        t1 = df %>% group_by(GROUPVAR)
+                    }
                 }
             } else {
-                if(isTruthy(input$plot_cluster) & input$plot_cluster != 'None' & input$plot_control == 'Multiple'){
-                    names(df)[names(df)==input$plot_cluster] = 'CLUS'
-                    t1 = df %>% group_by(GROUPVAR,CLUS)
-                } else {
-                    t1 = df %>% group_by(GROUPVAR)
-                }
+                t1 = df %>% group_by(GROUPVAR)
             }
+            
             t1 = t1 %>% summarize(N = n(),
                                  `Mean Target` = round(mean(`% Target`, na.rm = T),digits=2),
                                  `Median Target` = round(median(`% Target`, na.rm = T),digits=2),
                                  `Std Dev` = round(sd(`% Target`, na.rm = T),digits=2),
                                   .groups = 'keep') %>%
                 mutate(GROUPVAR = as.character(GROUPVAR))
-            if(isTruthy(input$plot_facet) & input$plot_facet != 'None'){
+            if(input$metaid =='' & isTruthy(input$plot_facet) & input$plot_facet != 'None'){
                 t1 = t1 %>% arrange(FAC)
             }
             names(t1)[names(t1)=='GROUPVAR'] = 'Group'
             names(t1)[names(t1)=='CLUS'] = 'Cluster'
             names(t1)[names(t1)=='FAC'] = 'Facet'
-            t1 = t1 %>% 
-                mutate(`X var` = input$groupname) %>%
-                select(`X var`,any_of('Facet'),Group, any_of('Cluster'), everything())
+            if(input$metaid ==''){
+                t1 = t1 %>% 
+                    mutate(`X var` = input$groupname) %>%
+                    select(`X var`,any_of('Facet'),Group, any_of('Cluster'), everything())
+            } else {
+                t1 = t1 %>% 
+                    select(any_of('Facet'),Group, everything())
+            }
             return(t1)
         }
     })
