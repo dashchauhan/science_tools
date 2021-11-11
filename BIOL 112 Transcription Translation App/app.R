@@ -9,18 +9,6 @@ ui <- fluidPage(
     
     # App title ----
     titlePanel("BIOL 112 - Transcription and Translation Problem Generator"),
-
-    # sidebarPanel(
-    #     
-    #     actionButton("do1", h3("Generate Problem")),
-    #     br(),
-    #     br(),
-    #     # br(),
-    #     actionButton("button_show2", "  Show All Answers", icon = icon('eye')),
-    #     br(),
-    #     # br(),
-    #     actionButton("button_hide2", "  Hide All Answers", icon = icon('eye-slash')),
-    # ),
     
         # MAIN PANEL ----
         mainPanel(
@@ -32,7 +20,6 @@ ui <- fluidPage(
                                  label = "Generate Problem", 
                                  icon = icon("sync"), 
                                  style="border-color: #FE5800"),
-                                 # style = "success"),
                         actionButton("button_show", 
                                  label = "  Show All Answers", 
                                  icon = icon("eye"), 
@@ -42,24 +29,18 @@ ui <- fluidPage(
                                  icon = icon("eye-slash"), 
                                  style = "success"),)
             ),
-            
-            
             # 
             h4(htmlOutput(outputId = 'parameters')),
             h4(htmlOutput(outputId = "text1")),
             h4(htmlOutput(outputId = "text2")),
             br(),
             h3("Questions:"),
-            # br(),
             h4(htmlOutput(outputId = "num_start")),
             actionButton("button1", "Show/Hide"),
-            # br(),
             h4(htmlOutput(outputId = "template")),
             actionButton("button2", "Show/Hide"),
-            # br(),
             h4(htmlOutput(outputId = "mrna")),
             actionButton("button3", "Show/Hide"),
-            # br(),
             h4(htmlOutput(outputId = "pep")),
             actionButton("button4", "Show/Hide"),
            )
@@ -84,7 +65,7 @@ output$parameters <- renderText({
 data <- eventReactive(input$do, {
         
         # Basic parameters
-        ct = read.csv('C:/Users/armet/Documents/Extracurricular Projects/BIOL 112 Transcription Translation App/codontable.csv')
+        ct = read.csv('codontable.csv')
         ct_nostop = ct %>% filter(Name != 'Stop')
         ct_stop = ct %>% filter(Name == 'Stop')
         total_length = 35
@@ -112,8 +93,6 @@ data <- eventReactive(input$do, {
                                  str_flatten(sample(c('A','T','C','G'),
                                                     extra_bases_2, replace = T)))
         #~~~~~~~~
-        #NEED TO CHANGE FROM GTA TO CAT
-        
         # Add wrong start codons
         # All unchangeable bases: start/stop codon, any bases that would run into start/stop
         untouchable = c(c((extra_bases_1-1):(extra_bases_1+3)),
