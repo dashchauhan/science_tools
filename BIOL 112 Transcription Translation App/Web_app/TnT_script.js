@@ -9,6 +9,28 @@ function do_onclick() {
     var last_hint = 0;
     const total_length = 35;
 
+    const _codon = {'Ala': ['GCA','GCC','GCG','GCT'], 
+                    'Arg': ['AGA','AGG','CGA','CGC','CGG','CGT'], 
+                    'Asn': ['AAC','AAT','GAC','GAT'],
+                    'Cys': ['TGC','TGT'],
+                    'Gln': ['CAA','CAG'],
+                    'Glu': ['GAA','GAG'],
+                    'Gly': ['GGA','GGC','GGG','GGT'],
+                    'His': ['CAC','CAT'],
+                    'Ile': ['ATA','ATC','ATT'],
+                    'Leu': ['CTA','CTC','CTG','CTT','TTA','TTG'],
+                    'Lys': ['AAA','AAG'],
+                    'Met': ['ATG'],
+                    'Phe': ['TTC','TTT'],
+                    'Pro': ['CCA','CCC','CCG','CCT'],
+                    'Ser': ['AGC','AGT','TCA','TCC','TCG','TCT'],
+                    'Stp': ['TAA','TAG','TGA'],
+                    'Thr': ['ACA','ACC','ACG','ACT'],
+                    'Trp': ['TGG'],
+                    'Tyr': ['TAC','TAT'],
+                    'Val': ['GTA','GTC','GTG','GTT']
+                    }
+
     // Codon table:
     var Codon = ['GCA','GCC','GCG','GCT','AGA','AGG','CGA','CGC','CGG','CGT',
     'AAC','AAT','GAC','GAT','TGC','TGT','CAA','CAG','GAA','GAG','GGA','GGC',
